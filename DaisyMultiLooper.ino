@@ -1,7 +1,9 @@
 #include "DaisyDuino.h"
 
-#define SINGLE_MAX_SIZE (48000 * 60 * 1) // 1 minute of floats at 48 khz
-#define TOTAL_MAX_SIZE SINGLE_MAX_SIZE * 3 // 3 loops
+#define SINGLE_MAX_SIZE (48000 * 20) // 20 seconds of floats at 48 khz
+#define LOOP2OFFSET (SINGLE_MAX_SIZE)
+#define LOOP3OFFSET (SINGLE_MAX_SIZE * 2)
+#define TOTAL_MAX_SIZE (SINGLE_MAX_SIZE * 3) // 3 loops
 
 static DaisyHardware petal;
 
@@ -9,23 +11,18 @@ enum State {
   idle_empty,
   armed,
   rec_first,
-  play,
-  overdub,
-  idle
+  play, // used in all loops
+  overdub, // used in all loops
+  idle // used in all loops
 };
-State loop1State;
-State loop2State;
-State loop3State;
+State loop1State = idle_empty;
+State loop2State = idle;
+State loop3State = idle;
 
 int pos = 0;
 float DSY_SDRAM_BSS buf[TOTAL_MAX_SIZE];
 int mod = SINGLE_MAX_SIZE;
 int len = 0;
-float drywet = 0.5;
-bool res = false;
-
-
-
   
 
 void ResetBuffer();
@@ -64,9 +61,6 @@ void setup() {
   ResetBuffer();
   loop1State = idle_empty;
 
-
-  petal.ClearLeds();
-
   // start callback
   DAISY.begin(AudioCallback);
 
@@ -75,26 +69,20 @@ void setup() {
   pinMode(0, OUTPUT);
   Serial.begin(115200);
 }
+
 void loop() {
-  // leds
-  //petal.SetFootswitchLed(1, play);
-  //petal.SetFootswitchLed(0, rec);
-  //petal.UpdateLeds();
-  //analogWrite(22, petal.GetKnobValue(1)* 255);
-  //Serial.println((int)(petal.GetKnobValue(1)* 255));
-  if (loop1State==idle_empty) {
-    Serial.println("idle_empty");
-  } else if (loop1State==armed) {
-    Serial.println("armed");
-  } else if (loop1State==rec_first) {
-    Serial.println("rec_first");
-  } else if (loop1State==play) {
-    Serial.println("play");
-  } else if (loop1State==overdub) {
-    Serial.println("overdub");
-  } else if (loop1State==idle) {
-    Serial.println("idle");
-  }
+
+  if (petal.buttons[0].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[1].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[2].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[3].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[4].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[5].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[6].Pressed()) Serial.print("X"); else Serial.print("_");
+  Serial.println(" <- buttons");
+  printStatus(loop1State, 1);
+  printStatus(loop2State, 2);
+  printStatus(loop3State, 3);
   Serial.print("mod: ");
   Serial.print(mod);
   Serial.print(", pos: ");
@@ -105,28 +93,77 @@ void loop() {
   digitalWrite(22, (loop1State==armed));
   digitalWrite(1, (loop1State==play));
   digitalWrite(0, ((loop1State == rec_first) || (loop1State == overdub)));
-  //digitalWrite(22, (max_counts>5000));
-  //digitalWrite(1, (max_counts>50000));
-  //digitalWrite(0, (max_counts>500000));
+
   delay(200);
 }
 
 void printStatus(State state, int name) {
-
+  Serial.print(name);
+  if (state==idle_empty) {
+    Serial.println(": idle_empty");
+  } else if (state==armed) {
+    Serial.println(": armed");
+  } else if (state==rec_first) {
+    Serial.println(": rec_first");
+  } else if (state==play) {
+    Serial.println(": play");
+  } else if (state==overdub) {
+    Serial.println(": overdub");
+  } else if (state==idle) {
+    Serial.println(": idle");
+  }
 }
 // Resets the buffer
 void ResetBuffer() {
   pos = 0;
   len = 0;
-  for (int i = 0; i < mod; i++) {
+  for (int i = 0; i < TOTAL_MAX_SIZE; i++) {
     buf[i] = 0;
   }
   mod = SINGLE_MAX_SIZE;
 }
 
 void UpdateButtons() {
+  if (petal.buttons[1].RisingEdge()) { // loop 1 rec
+    if (loop1State == idle_empty) {
+      loop1State = armed;
+    } else if (loop1State == rec_first) {
+      mod = len;
+      len = 0;
+      loop1State = overdub;
+    } else if (loop1State == play) {
+      loop1State = overdub;
+    } else if (loop1State == idle) {
+      loop1State = overdub;
+    } else if (loop1State == overdub) {
+      loop1State = play;
+    }
+    if (loop2State == overdub) loop2State = play; // downgrade any recording loops to playing
+    if (loop3State == overdub) loop3State = play;
+  }
+  if (petal.buttons[3].RisingEdge()) { // loop 2 rec
+    if ((loop2State == idle) || (loop2State == play)) {
+      loop2State = overdub;
+    } else if (loop2State == overdub) {
+      loop2State = play;
+    }
+    if (loop1State == overdub) loop1State = play; // downgrade any recording loops to playing
+    if (loop3State == overdub) loop3State = play;
+  }
+  if (petal.buttons[5].RisingEdge()) { // loop 3 rec
+    if ((loop3State == idle) || (loop3State == play)) {
+      loop3State = overdub;
+    } else if (loop3State == overdub) {
+      loop3State = play;
+    }
+    if (loop2State == overdub) loop2State = play; // downgrade any recording loops to playing
+    if (loop3State == overdub) loop3State = play;
+  }
+
+
+
   // switch1 pressed
-  if (petal.buttons[0].RisingEdge()) { // pressed play button
+  if (petal.buttons[0].RisingEdge()) { // pressed loop 1 play button
     if (loop1State == rec_first) {
       mod = len;
       len = 0;
@@ -141,56 +178,47 @@ void UpdateButtons() {
       loop1State = play;
     }
   }
-
-  // switch1 held
-  if (petal.buttons[0].TimeHeldMs() >= 1000 && loop1State != idle_empty) { // hold play button
-    ResetBuffer();
-    loop1State = idle_empty;
+  if (petal.buttons[2].RisingEdge()) { // pressed loop 2 play button
+    if (loop2State == overdub) {
+      loop2State = play;
+    }else if (loop2State == play) {
+      loop2State = idle;
+    }else if (loop2State == idle) {
+      loop2State = play;
+    }
   }
-
-  // switch2 pressed and not empty buffer
-  if (petal.buttons[1].RisingEdge()) { // pres rec button
-    if (loop1State == idle_empty) {
-      loop1State = armed;
-    } else if (loop1State == rec_first) {
-      mod = len;
-      len = 0;
-      loop1State = overdub;
-    } else if (loop1State == play) {
-      loop1State = overdub;
-    }else if (loop1State == idle) {
-      loop1State = overdub;
+  if (petal.buttons[4].RisingEdge()) { // pressed loop 3 play button
+    if (loop3State == overdub) {
+      loop3State = play;
+    }else if (loop3State == play) {
+      loop3State = idle;
+    }else if (loop3State == idle) {
+      loop3State = play;
     }
   }
 
+  if (petal.buttons[0].TimeHeldMs() >= 1000 && loop1State != idle_empty) { // hold play button
+    ResetBuffer();
+    loop1State = idle_empty;
+    loop2State = idle;
+    loop3State = idle;
+  }
+
+  if ((loop1State == idle) && (loop2State == idle) && (loop3State == idle)) pos = 0; // if nothing else is playing, move playback head to start
 }
 
 // Deals with analog controls
 void Controls() {
   petal.ProcessAllControls();
-  
-  drywet = petal.controls[0].Value();
-
   UpdateButtons();
 }
 
-void WriteBuffer(float *in, size_t i) {
-  buf[pos] = buf[pos] * 0.5 + in[i] * 0.5;
-  if (loop1State == rec_first) {
-    len++;
-  }
-}
-
 void NextSamples(float &output, float *in, size_t i) {
-  if ((loop1State == rec_first) || (loop1State == overdub)) {
-    //WriteBuffer(in, i);
-    buf[pos] = buf[pos] * 1.0 + in[i] * 1.0;
-    if (loop1State == rec_first) {
-     len++;
-    }
-  }
-
-  output = buf[pos];
+  if ((loop1State == rec_first) || (loop1State == overdub)) buf[pos] = buf[pos] + in[i];
+  if (loop2State == overdub) buf[LOOP2OFFSET + pos] = buf[LOOP2OFFSET + pos] + in[i];
+  if (loop3State == overdub) buf[LOOP3OFFSET + pos] = buf[LOOP3OFFSET + pos] + in[i];
+  if (loop1State == rec_first) len++;
+  output = buf[pos] + buf[LOOP2OFFSET + pos] + buf[LOOP3OFFSET + pos];
 
   // automatic looptime
   if (len >= SINGLE_MAX_SIZE) {
@@ -199,12 +227,16 @@ void NextSamples(float &output, float *in, size_t i) {
     loop1State=play;
   }
 
-  if ((loop1State == rec_first) || (loop1State == play) || (loop1State == overdub)) {
+  if ((loop1State == rec_first) || (loop1State == play) || (loop1State == overdub)
+        || (loop2State == play) || (loop2State == overdub)
+        || (loop3State == play) || (loop3State == overdub)) {
     pos++;
     pos %= mod;
   }
 
-  if ((loop1State != rec_first) && (loop1State != overdub)) {
-    output = output * 1.0 + in[i] * 1.0;
+  if ((loop1State != rec_first) && (loop1State != overdub)
+      && (loop2State != overdub)
+      && (loop3State != overdub)) {
+    output = output + in[i];
   }
 }
