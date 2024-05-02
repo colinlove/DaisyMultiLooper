@@ -43,7 +43,7 @@ static void AudioCallback(float *in, float *out, size_t size) {
     out[i] = out[i + 1] = output;
     if (output>max_value) max_value=output;
     if (output<min_value) min_value=output;
-    if ((max_value-min_value)*(16777216)>50000) {
+    if ((max_value-min_value)*(16777216)>70000) {
       if (loop1State==armed) {
         loop1State = rec_first;
       }
@@ -156,8 +156,8 @@ void UpdateButtons() {
     } else if (loop3State == overdub) {
       loop3State = play;
     }
-    if (loop2State == overdub) loop2State = play; // downgrade any recording loops to playing
-    if (loop3State == overdub) loop3State = play;
+    if (loop1State == overdub) loop1State = play; // downgrade any recording loops to playing
+    if (loop2State == overdub) loop2State = play;
   }
 
 
@@ -214,11 +214,18 @@ void Controls() {
 }
 
 void NextSamples(float &output, float *in, size_t i) {
+  // Mirror input to output
+  output = in[i];
+  // add each playback to output before recording new layers
+  if (loop1State!=idle) output = output + buf[pos];
+  if (loop2State!=idle) output = output + buf[LOOP2OFFSET + pos];
+  if (loop3State!=idle) output = output + buf[LOOP3OFFSET + pos];
+  // record new layers if recording active for that looper
   if ((loop1State == rec_first) || (loop1State == overdub)) buf[pos] = buf[pos] + in[i];
   if (loop2State == overdub) buf[LOOP2OFFSET + pos] = buf[LOOP2OFFSET + pos] + in[i];
   if (loop3State == overdub) buf[LOOP3OFFSET + pos] = buf[LOOP3OFFSET + pos] + in[i];
+  // increment looptime if this is the first layer
   if (loop1State == rec_first) len++;
-  output = buf[pos] + buf[LOOP2OFFSET + pos] + buf[LOOP3OFFSET + pos];
 
   // automatic looptime
   if (len >= SINGLE_MAX_SIZE) {
@@ -226,17 +233,11 @@ void NextSamples(float &output, float *in, size_t i) {
     len = 0;
     loop1State=play;
   }
-
+  // if anything is playing or recording increment position
   if ((loop1State == rec_first) || (loop1State == play) || (loop1State == overdub)
         || (loop2State == play) || (loop2State == overdub)
         || (loop3State == play) || (loop3State == overdub)) {
     pos++;
     pos %= mod;
-  }
-
-  if ((loop1State != rec_first) && (loop1State != overdub)
-      && (loop2State != overdub)
-      && (loop3State != overdub)) {
-    output = output + in[i];
   }
 }
