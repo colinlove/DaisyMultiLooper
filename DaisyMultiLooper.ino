@@ -1,9 +1,17 @@
 #include "DaisyDuino.h"
 
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include "Adafruit_LEDBackpack.h"
+#define DISPLAY_ADDRESS 0x70
+
 #define SINGLE_MAX_SIZE (48000 * 20) // 20 seconds of floats at 48 khz
 #define LOOP2OFFSET (SINGLE_MAX_SIZE)
 #define LOOP3OFFSET (SINGLE_MAX_SIZE * 2)
 #define TOTAL_MAX_SIZE (SINGLE_MAX_SIZE * 3) // 3 loops
+
+Adafruit_AlphaNum4 disp = Adafruit_AlphaNum4();
+int animloop = 0;
 
 static DaisyHardware petal;
 
@@ -68,6 +76,12 @@ void setup() {
   pinMode(1, OUTPUT);
   pinMode(0, OUTPUT);
   Serial.begin(115200);
+
+  // initialize 4 digit LED alpha display
+  disp.begin(DISPLAY_ADDRESS);
+  disp.setBrightness(4);
+  disp.clear();
+  disp.writeDisplay();
 }
 
 void loop() {
@@ -93,6 +107,61 @@ void loop() {
   digitalWrite(22, (loop1State==armed));
   digitalWrite(1, (loop1State==play));
   digitalWrite(0, ((loop1State == rec_first) || (loop1State == overdub)));
+
+  animloop++;
+  if (animloop==4) animloop = 0;
+  if (loop1State==armed) {
+    disp.writeDigitRaw(3, 0b111111);
+    disp.writeDigitRaw(2, 0b1000);
+    disp.writeDigitRaw(1, 0b1000);
+    disp.writeDigitRaw(0, 0b111111);
+  } else if (loop1State == rec_first) {
+    switch (animloop) {
+      case 0:
+        disp.writeDigitRaw(3, 0b11111111);
+        disp.writeDigitRaw(0, 0b01001000111111);
+        break;
+      case 1:
+        disp.writeDigitRaw(3, 0b10000100111111);
+        disp.writeDigitRaw(0, 0b00110000111111);
+        break;
+      case 2:
+        disp.writeDigitRaw(3, 0b01001000111111);
+        disp.writeDigitRaw(0, 0b11111111);
+        break;
+      case 3:
+        disp.writeDigitRaw(3, 0b00110000111111);
+        disp.writeDigitRaw(0, 0b10000100111111);
+        break;
+    }
+    disp.writeDigitRaw(2, 0b1000);
+    disp.writeDigitRaw(1, 0b1000);
+  } else {
+    if (loop1State==play) {
+      disp.writeDigitRaw(3, 0b10010000000110);
+    } else if (loop1State==overdub) {
+      disp.writeDigitRaw(3, 0b10110100110110);
+    } else {
+      disp.writeDigitRaw(3, 0b0);
+    }
+    if (loop2State==play) {
+      disp.writeDigitRaw(2, 0b10010000000110);
+    } else if (loop2State==overdub) {
+      disp.writeDigitRaw(2, 0b10110100110110);
+    } else {
+      disp.writeDigitRaw(2, 0b0);
+    }
+    if (loop3State==play) {
+      disp.writeDigitRaw(1, 0b10010000000110);
+    } else if (loop3State==overdub) {
+      disp.writeDigitRaw(1, 0b10110100110110);
+    } else {
+      disp.writeDigitRaw(1, 0b0);
+    }
+    disp.writeDigitRaw(0, 0b0);
+  }
+
+  disp.writeDisplay();
 
   delay(200);
 }
