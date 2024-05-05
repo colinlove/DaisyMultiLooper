@@ -40,13 +40,11 @@ void NextSamples(float &output, float *in, size_t i);
 
 static void AudioCallback(float *in, float *out, size_t size) {
   float output = 0;
-  
   Controls();
   float max_value = 0.0;
   float min_value = 1.0;
   for (size_t i = 0; i < size; i += 2) {
     NextSamples(output, in, i);
-
     // left and right outs
     out[i] = out[i + 1] = output;
     if (output>max_value) max_value=output;
@@ -57,9 +55,6 @@ static void AudioCallback(float *in, float *out, size_t size) {
       }
     }
   }
-
-
-
 }
 
 void setup() {
@@ -110,7 +105,12 @@ void loop() {
 
   animloop++;
   if (animloop==4) animloop = 0;
-  if (loop1State==armed) {
+  if (loop1State==idle_empty) {
+    disp.writeDigitRaw(3, 0b111);
+    disp.writeDigitRaw(2, 0b111111);
+    disp.writeDigitRaw(1, 0b111111);
+    disp.writeDigitRaw(0, 0b100010001110);
+  } else if (loop1State==armed) {
     disp.writeDigitRaw(3, 0b111111);
     disp.writeDigitRaw(2, 0b1000);
     disp.writeDigitRaw(1, 0b1000);
@@ -192,107 +192,133 @@ void ResetBuffer() {
   mod = SINGLE_MAX_SIZE;
 }
 
-void UpdateButtons() {
-  if (petal.buttons[1].RisingEdge()) { // loop 1 rec
-    if (loop1State == idle_empty) {
-      loop1State = armed;
-    } else if (loop1State == rec_first) {
-      mod = len;
-      len = 0;
-      loop1State = overdub;
-    } else if (loop1State == play) {
-      loop1State = overdub;
-    } else if (loop1State == idle) {
-      loop1State = overdub;
-    } else if (loop1State == overdub) {
-      loop1State = play;
-    }
-    if (loop2State == overdub) loop2State = play; // downgrade any recording loops to playing
-    if (loop3State == overdub) loop3State = play;
-  }
-  if (petal.buttons[3].RisingEdge()) { // loop 2 rec
-    if ((loop2State == idle) || (loop2State == play)) {
-      loop2State = overdub;
-    } else if (loop2State == overdub) {
-      loop2State = play;
-    }
-    if (loop1State == overdub) loop1State = play; // downgrade any recording loops to playing
-    if (loop3State == overdub) loop3State = play;
-  }
-  if (petal.buttons[5].RisingEdge()) { // loop 3 rec
-    if ((loop3State == idle) || (loop3State == play)) {
-      loop3State = overdub;
-    } else if (loop3State == overdub) {
-      loop3State = play;
-    }
-    if (loop1State == overdub) loop1State = play; // downgrade any recording loops to playing
-    if (loop2State == overdub) loop2State = play;
-  }
-
-
-
-  // switch1 pressed
-  if (petal.buttons[0].RisingEdge()) { // pressed loop 1 play button
-    if (loop1State == rec_first) {
-      mod = len;
-      len = 0;
-      Serial.print("Rec->Play: ");
-      Serial.println(mod);
-      loop1State = play;
-    } else if (loop1State == overdub) {
-      loop1State = play;
-    }else if (loop1State == play) {
-      loop1State = idle;
-    }else if (loop1State == idle) {
-      loop1State = play;
-    }
-  }
-  if (petal.buttons[2].RisingEdge()) { // pressed loop 2 play button
-    if (loop2State == overdub) {
-      loop2State = play;
-    }else if (loop2State == play) {
-      loop2State = idle;
-    }else if (loop2State == idle) {
-      loop2State = play;
-    }
-  }
-  if (petal.buttons[4].RisingEdge()) { // pressed loop 3 play button
-    if (loop3State == overdub) {
-      loop3State = play;
-    }else if (loop3State == play) {
-      loop3State = idle;
-    }else if (loop3State == idle) {
-      loop3State = play;
-    }
-  }
-
-  if (petal.buttons[0].TimeHeldMs() >= 1000 && loop1State != idle_empty) { // hold play button
-    ResetBuffer();
-    loop1State = idle_empty;
-    loop2State = idle;
-    loop3State = idle;
-  }
-
-  if ((loop1State == idle) && (loop2State == idle) && (loop3State == idle)) pos = 0; // if nothing else is playing, move playback head to start
-}
-
 // Deals with analog controls
 void Controls() {
   petal.ProcessAllControls();
   UpdateButtons();
 }
 
+void UpdateButtons() {
+  if (petal.buttons[1].RisingEdge()) { // loop 1 rec
+    switch (loop1State) {
+      case idle_empty:
+        loop1State = armed;
+        break;
+      case armed:
+        loop1State = idle_empty;
+        break;
+      case rec_first:
+        mod = len;
+        len = 0;
+        loop1State = overdub;
+        break;
+      case play:
+      case idle:
+        loop1State = overdub;
+        break;
+      case overdub:
+        loop1State = play;
+        break;
+    }
+    if (loop2State == overdub) loop2State = play; // downgrade any recording loops to playing
+    if (loop3State == overdub) loop3State = play;
+  }
+  if (petal.buttons[3].RisingEdge()) { // loop 2 rec
+    switch (loop2State) {
+      case idle:
+      case play:
+        loop2State = overdub;
+        break;
+      case (overdub):
+        loop2State = play;
+        break;
+    }
+    if (loop1State == overdub) loop1State = play; // downgrade any recording loops to playing
+    if (loop3State == overdub) loop3State = play;
+  }
+  if (petal.buttons[5].RisingEdge()) { // loop 3 rec
+    switch (loop3State) {
+      case idle:
+      case play:
+        loop3State = overdub;
+        break;
+      case overdub:
+        loop3State = play;
+        break;
+    }
+    if (loop1State == overdub) loop1State = play; // downgrade any recording loops to playing
+    if (loop2State == overdub) loop2State = play;
+  }
+  if (petal.buttons[0].RisingEdge()) { // pressed loop 1 play button
+    switch (loop1State) {
+      case rec_first:
+        mod = len;
+        len = 0;
+        loop1State = play;
+        break;
+      case overdub:
+      case idle:
+        loop1State = play;
+        break;
+      case play:
+        loop1State = idle;
+        break;
+    }
+  }
+  if (petal.buttons[2].RisingEdge()) { // pressed loop 2 play button
+    switch (loop2State) {
+      case overdub:
+      case idle:
+        loop2State = play;
+        break;
+      case play:
+        loop2State = idle;
+        break;
+    }
+  }
+  if (petal.buttons[4].RisingEdge()) { // pressed loop 3 play button
+    switch (loop2State) {
+      case overdub:
+      case idle:
+        loop3State = play;
+        break;
+      case play:
+        loop3State = idle;
+        break;
+    }
+  }
+  if (petal.buttons[0].TimeHeldMs() >= 1000 && loop1State != idle_empty) { // hold play button
+    ResetBuffer();
+    loop1State = idle_empty;
+    loop2State = idle;
+    loop3State = idle;
+  }
+  if (petal.buttons[0].Pressed() && petal.buttons[1].Pressed()) {
+    for (int i = 0; i < LOOP2OFFSET; i++) buf[i] = 0;
+    loop1State = idle;
+  }
+  if (petal.buttons[2].Pressed() && petal.buttons[3].Pressed()) {
+    for (int i = LOOP2OFFSET; i < LOOP3OFFSET; i++) buf[i] = 0;
+    loop2State = idle;
+  }
+  if (petal.buttons[4].Pressed() && petal.buttons[5].Pressed()) {
+    for (int i = LOOP3OFFSET; i < TOTAL_MAX_SIZE; i++) buf[i] = 0;
+    loop3State = idle;
+  }  
+  if ((loop1State == idle) && (loop2State == idle) && (loop3State == idle)) pos = 0; // if nothing else is playing, move playback head to start
+}
+
 void NextSamples(float &output, float *in, size_t i) {
   // Mirror input to output
   output = in[i];
   // add each playback to output before recording new layers
-  if (loop1State!=idle) output = output + buf[pos];
-  if (loop2State!=idle) output = output + buf[LOOP2OFFSET + pos];
-  if (loop3State!=idle) output = output + buf[LOOP3OFFSET + pos];
+  if (loop1State!=idle) output += buf[pos];
+  if (loop2State!=idle) output += buf[LOOP2OFFSET + pos];
+  if (loop3State!=idle) output += buf[LOOP3OFFSET + pos];
   // record new layers if recording active for that looper
-  if ((loop1State == rec_first) || (loop1State == overdub)) buf[pos] = buf[pos] + in[i];
-  if (loop2State == overdub) buf[LOOP2OFFSET + pos] = buf[LOOP2OFFSET + pos] + in[i];
-  if (loop3State == overdub) buf[LOOP3OFFSET + pos] = buf[LOOP3OFFSET + pos] + in[i];
+  if ((loop1State == rec_first) || (loop1State == overdub)) buf[pos] += in[i];
+  if (loop2State == overdub) buf[LOOP2OFFSET + pos] += in[i];
+  if (loop3State == overdub) buf[LOOP3OFFSET + pos] += in[i];
   // increment looptime if this is the first layer
   if (loop1State == rec_first) len++;
 
@@ -302,7 +328,7 @@ void NextSamples(float &output, float *in, size_t i) {
     len = 0;
     loop1State=play;
   }
-  // if anything is playing or recording increment position
+  // if anything is playing or recording then increment position
   if ((loop1State == rec_first) || (loop1State == play) || (loop1State == overdub)
         || (loop2State == play) || (loop2State == overdub)
         || (loop3State == play) || (loop3State == overdub)) {
