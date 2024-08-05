@@ -1,13 +1,15 @@
 #include "utility/led_driver.h"
 
-#define PIN_PETAL_SWITCH_1 8
-#define PIN_PETAL_SWITCH_2 9
-#define PIN_PETAL_SWITCH_3 10
-#define PIN_PETAL_SWITCH_4 13
-#define PIN_PETAL_SWITCH_5 25
-#define PIN_PETAL_SWITCH_6 26
+#define PIN_PETAL_SWITCH_1 1
+#define PIN_PETAL_SWITCH_2 2
+#define PIN_PETAL_SWITCH_3 3
+#define PIN_PETAL_SWITCH_4 4
+#define PIN_PETAL_SWITCH_5 5
+#define PIN_PETAL_SWITCH_6 6
 #define PIN_PETAL_SWITCH_7 7
-#define PIN_PETAL_SWITCH_8 6
+#define PIN_PETAL_SWITCH_8 8
+#define PIN_PETAL_SWITCH_9 9
+#define PIN_PETAL_SWITCH_10 10
 
 #define PIN_PETAL_ENC_A 28
 #define PIN_PETAL_ENC_B 27
@@ -65,4 +67,3 @@ enum LedOrder
     PETAL_LED_FAKE4,
     PETAL_LED_LAST,
 };
-

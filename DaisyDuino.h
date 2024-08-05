@@ -46,7 +46,7 @@ class DaisyHardware {
 public:
   DaisyHardware() {}
 
-  Switch buttons[8];
+  Switch buttons[10];
   AnalogControl controls[12];
   AnalogControl cv[4]; // for use with field
 
