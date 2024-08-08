@@ -67,8 +67,14 @@
 #define iiBackslash    0b0010000100000000 // backslash
 #define iiMinus    0b0000000011000000 // -
 
+int timeint=0;
+int offsx=0;
+int offsy=0;
+int segarrayx[] = {5,2,0,-2,2,0,-2,2,-2,-4,-4,0,4,4,0};
+int segarrayy[] = {-6,-3,-3,-3,3,3,3,0,0,3,-3,-6,-3,3,6};
+
 void UI_Menu_Buttons() {
-  if (UI==UI_Welcome) {
+  if ((UI==UI_Welcome) || (UI==UI_Welcome)) {
 
     if (petal.buttons[4].RisingEdge()) {
       UI=UI_FX;
@@ -79,7 +85,7 @@ void UI_Menu_Buttons() {
   } else if (UI==UI_FX) {
 
     if (petal.buttons[4].RisingEdge()) {
-      UI=UI_FX;
+      UI=UI_Anim;
     } else if (petal.buttons[9].RisingEdge()) {
       UI=UI_Loop;
     }
@@ -100,6 +106,43 @@ void UI_Menu_Buttons() {
       UI=UI_Loop;
     }
 
+  } else if (UI==UI_Anim) {
+    timeint+=1;
+    if (timeint>400) {
+      timeint=0;
+    }
+    //offsx=random(-100,100);
+    //offsy=random(-100,100);
+    offsy=-abs(sin((float)timeint/20)*70)+60;
+    offsx=-(timeint-200);
+    
+    for (int displayrow=0; displayrow<2; displayrow++) {
+      for (int displaycol=0; displaycol<4; displaycol++) {
+        
+        for (int digit=0;digit<4;digit++){
+          int digitx=displaycol*75+digit*13-132+offsx;
+          int digity=(displayrow*-36)+18+offsy;
+          int segraw=0;
+          for (int seg=0;seg<15;seg++) {
+            segraw*=2;
+            int segx = digitx+segarrayx[seg];
+            int segy = digity+segarrayy[seg];
+            int distsq = (segx*segx)+(segy*segy);
+            if (((distsq<2000)&&(distsq>1500)) || 
+                (((distsq<800)&&(distsq>400))&&(segy<0)) || 
+                ((segx>10) && (segx<20) && (segy>10) && (segy<20)) || 
+                ((segx<-10) && (segx>-20) && (segy>10) && (segy<20))) {
+              segraw+=1;
+            }
+          }
+          disp[displayrow*4+displaycol].writeDigitRaw(digit, segraw);
+        }
+        
+        disp[displayrow*4+displaycol].writeDisplay();
+        disp[displayrow*4+displaycol].clear();
+      }
+    }
+    delay(5);
   }
   if (petal.buttons[0].TimeHeldMs() >= 3000 && petal.buttons[9].TimeHeldMs() >= 3000) resetToBootloader();
 }
@@ -107,12 +150,12 @@ void UI_Menu_Buttons() {
 void UI_Display() {
   if (UI==UI_Welcome) {
     display(0, iiSlash, iiSlash, iiSlash, iiSlash);
-    display(1, iiBackslash, iiBackslash, iiBackslash, iiBackslash);
-    display(2, iiL, iiO, iiO, iiP);
-    display(3, iiL, iiO, iiO, iiP);
-    display(4, iiL, iiO, iiO, iiP);
-    display(5, iiP, iiO, iiO, iiP);
-    display(6, iiBackslash, iiBackslash, iiBackslash, iiBackslash);
+    display(1, iiL, iiO, iiO, iiP);
+    display(2, 0b0000000000100001, 0b0000000011100011, 0b0000000011100011, 0b0000001010000011);
+    display(3, iiBackslash, iiBackslash, iiBackslash, iiBackslash);
+    display(4, iiBackslash, iiBackslash, iiBackslash, iiBackslash);
+    display(5, 0b0000000000100001, 0b0000000011100011, 0b0000000011100011, 0b0000001010000011);
+    display(6, iid, iiO, iiO, 0b0000000000000111);
     display(7, iiSlash, iiSlash, iiSlash, iiSlash);
   } else if (UI==UI_FX) {
     display(0, iiD, iii, iis, iit);

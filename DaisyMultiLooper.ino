@@ -16,6 +16,7 @@ int timeCalcLoop=0;
 
 enum UIStateType {
   UI_Welcome,
+  UI_Anim,
   UI_FX, // shows all different FX
   UI_Dist, // shows distortion sub-menu
   UI_Loop, // shows loop status and play/rec buttons
@@ -70,7 +71,17 @@ void loop() {
   UI_Menu_Buttons();
   //------------------------------------------------------------------------------------------------------------
   //dist_loop();
-  
+  if (petal.buttons[0].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[1].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[2].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[3].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[4].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[5].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[6].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[7].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[8].Pressed()) Serial.print("X"); else Serial.print("_");
+  if (petal.buttons[9].Pressed()) Serial.print("X"); else Serial.print("_");
+  Serial.println(" <- buttons");
   //------------------------------------------------------------------------------------------------------------
   stopTime = micros();
   timeCalcLoop++;
