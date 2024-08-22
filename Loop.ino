@@ -1,25 +1,4 @@
-#define SINGLE_MAX_SIZE (48000 * 20) // 20 seconds of floats at 48 khz
-#define LOOP2OFFSET (SINGLE_MAX_SIZE)
-#define LOOP3OFFSET (SINGLE_MAX_SIZE * 2)
-#define LOOP4OFFSET (SINGLE_MAX_SIZE * 3)
-#define TOTAL_MAX_SIZE (SINGLE_MAX_SIZE * 4) // 4 loops
 
-int animloop = 0;
-
-enum ChannelState {
-  idle_empty,
-  armed,
-  rec_first,
-  play, // used in all loops
-  overdub, // used in all loops
-  idle // used in all loops
-};
-ChannelState loop1State, loop2State, loop3State, loop4State;
-
-int pos = 0;
-float DSY_SDRAM_BSS buf[TOTAL_MAX_SIZE];
-int mod = SINGLE_MAX_SIZE;
-int len = 0;
 uint16_t time_marker;
 
 void ResetBuffer();
