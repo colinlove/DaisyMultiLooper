@@ -175,7 +175,7 @@ void UI_Display() {
     display(2, iiM, iie, iil, iil);
     display(3, iiC, iih, iio, iir);
     display(4, iiMinus, iiMinus, iiMinus, iiMinus);
-    display(5, iiMinus, iiMinus, iiMinus, iiMinus);
+    display_level(5, inp_octv*4);
     display(6, iiMinus, iiMinus, iiMinus, iiMinus);
     display(7, iiMinus, iiMinus, iiMinus, iiMinus);
   
@@ -269,21 +269,8 @@ void UI_Display() {
 
 
   } else if (UI==UI_VU) {
-    //int in_int=(int)(vu_in_max*10000.0);
-    int in_int=128-(int)(5.57*log(vu_in_max)/0.693147);
-    int out_int=128-(int)log(1/vu_out_max);
-    Serial.print("vu_in_max: ");
-    Serial.println(vu_in_max);
-    Serial.print("vu_in_max*1000.0: ");
-    Serial.println(vu_in_max*1000.0);
-    Serial.print("vu_in_max*1000000.0: ");
-    Serial.println(vu_in_max*1000000.0);
-    Serial.print("vu_in_max*1000000000.0: ");
-    Serial.println(vu_in_max*1000000000.0);
-    //Serial.print(" ");
-    //Serial.print(1/vu_in_max);
-    //Serial.print(log(1/vu_in_max));
-    //Serial.print((int)log(1/vu_in_max));
+    int in_int=128+(int)(5.565*log(vu_in_max)/0.693147);
+    int out_int=128+(int)(5.565*log(vu_out_max)/0.693147);
     
     display(0, vu_seg(in_int), vu_seg(in_int-8), vu_seg(in_int-16), vu_seg(in_int-24)); in_int-=32;
     display(1, vu_seg(in_int), vu_seg(in_int-8), vu_seg(in_int-16), vu_seg(in_int-24)); in_int-=32;
@@ -294,7 +281,7 @@ void UI_Display() {
     display(6, vu_seg(out_int), vu_seg(out_int-8), vu_seg(out_int-16), vu_seg(out_int-24)); out_int-=32;
     display(7, vu_seg(out_int), vu_seg(out_int-8), vu_seg(out_int-16), vu_seg(out_int-24)); 
     vu_in_max*=0.9;
-    vu_out_max=0.0;
+    vu_out_max*=0.9;
   } else if (UI==UI_Anim) {
     timeint+=1;
     if (timeint>400) {
@@ -322,6 +309,28 @@ void UI_Display() {
                 ((segx>10) && (segx<20) && (segy>10) && (segy<20)) || 
                 ((segx<-10) && (segx>-20) && (segy>10) && (segy<20))) {
               segraw+=1;
+            }
+          }
+          int disp_num=displayrow*4+displaycol;
+          if (disp_num==6) {
+            if (digit==0) {
+              segraw=segraw|iiB;
+            } else if (digit==1) {
+              segraw=segraw|iiR;
+            } else if (digit==2) {
+              segraw=segraw|iiE;
+            } else if (digit==3) {
+              segraw=segraw|iiA;
+            }
+          } else if (disp_num==7) {
+            if (digit==0) {
+              segraw=segraw|iiD;
+            } else if (digit==1) {
+              segraw=segraw|iiT;
+            } else if (digit==2) {
+              segraw=segraw|iiA;
+            } else if (digit==3) {
+              segraw=segraw|iiG;
             }
           }
           disp[displayrow*4+displaycol].writeDigitRaw(digit, segraw);

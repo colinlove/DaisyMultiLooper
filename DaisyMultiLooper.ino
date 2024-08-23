@@ -7,6 +7,8 @@
 #define DISPLAY_ADDRESS 112
 #define ECHO_SAMPLE_MAX (2*48000) // second @ 48KHz
 #define VERB_SAMPLE_MAX (1*48000) // second @ 48KHz
+#define OCTV_SAMPLE_MAX (7200) // 150ms @ 48kHz
+#define OCTV_SAMPLE_HALF (3600)
 
 Adafruit_AlphaNum4 disp[8];
 
@@ -32,6 +34,7 @@ int inp_trem=0;
 int last_trem=2;
 
 int inp_mell=0;
+int inp_octv=0;
 
 // distortion
   float dist_SoftGain = 10;
@@ -64,13 +67,22 @@ int inp_mell=0;
 #define LOOP3OFFSET (SINGLE_MAX_SIZE * 2)
 #define LOOP4OFFSET (SINGLE_MAX_SIZE * 3)
 #define TOTAL_MAX_SIZE (SINGLE_MAX_SIZE * 4) // 4 loops
-
-
-
 int pos = 0;
 float DSY_SDRAM_BSS buf[TOTAL_MAX_SIZE];
 int mod = SINGLE_MAX_SIZE;
 int len = 0;
+// octave down
+float DSY_SDRAM_BSS octv_buf[OCTV_SAMPLE_MAX+1];
+int octv_time=0; // delete
+int octv_time_rising=0; // buffer position of segment that is fading in
+int octv_time_falling=0; // buffer position of segment that is fading out
+int octv_transient_start=0; // buffer position of start of tansient
+int octv_attack_remaining=0; // samples remaining in attack curve
+int octv_hold_remaining=0; // samples remaining after attack before fading to new segment
+int octv_fade_remaining=0;
+float octv_transient_max=1.0;
+int octv_pre_trig=300;
+int octv_transient=0;
 
 int animloop = 0;
 
@@ -127,6 +139,7 @@ void setup() {
 
     for (int i=0; i<ECHO_SAMPLE_MAX; i++) echo_buf[i]=0;
     for (int i=0; i<VERB_SAMPLE_MAX; i++) verb_buf[i]=0;
+    for (int i=0; i<OCTV_SAMPLE_MAX+1; i++) octv_buf[i]=0; // one extra sample for interpolation of last sample
   //------------------------------------------------------------------------------------------------------------
   DAISY.begin(AudioCallback);
   //------------------------------------------------------------------------------------------------------------
@@ -154,6 +167,24 @@ static void AudioCallback(float **in, float **out, size_t size) {
         loop1State = rec_first;
       }
     }
+    if (inp_octv) {
+      float signal_in=signal;
+      float octv_scale=(float)octv_time/(float)OCTV_SAMPLE_MAX;
+      if ((octv_time%2)==0) { // even sample
+        signal=octv_buf[octv_time/2]*octv_scale + octv_buf[octv_time/2+OCTV_SAMPLE_HALF] * (1-octv_scale);
+      } else { // odd sample
+        signal=(
+          octv_buf[octv_time/2]*octv_scale + octv_buf[octv_time/2+OCTV_SAMPLE_HALF] * (1-octv_scale)
+          +
+          octv_buf[octv_time/2+1]*octv_scale + octv_buf[octv_time/2+OCTV_SAMPLE_HALF+1] * (1-octv_scale)
+        )/2.0;
+      }
+      octv_buf[octv_time]=signal_in;
+    } else {
+      octv_buf[octv_time]=0;
+    }
+    octv_time++;
+    if (octv_time>=OCTV_SAMPLE_MAX) octv_time=0;
 
     if (inp_dist) {
       signal *= dist_SoftGain;
@@ -228,11 +259,13 @@ static void AudioCallback(float **in, float **out, size_t size) {
       pos++;
       pos %= mod;
     }
+    signal*=4;
+
     if (signal>vu_out_max) vu_out_max=signal;
     if (-signal>vu_out_max) vu_out_max=-signal;
 
     if (inp_mell) signal=0;
-    signal*=4;
+    
     out[0][i] = out[1][i] = signal;
 
 

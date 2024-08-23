@@ -210,7 +210,7 @@ void UI_Menu_Buttons() {
     } else if (BottomRow1) {
       UI=UI_xx; // Turn Comp On/Off
     } else if (BottomRow2) {
-      UI=UI_xx; // Turn Octv On/Off
+      inp_octv=1-inp_octv; // Turn Octv On/Off
     } else if (BottomRow3) {
       inp_mell=1-inp_mell; // Turn Mell On/Off
     } else if (BottomRow4) {
