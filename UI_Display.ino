@@ -173,11 +173,11 @@ void UI_Display() {
     display(0, iiC, iio, iim, iip);
     display(1, iiO, iic, iit, iiv);
     display(2, iiM, iie, iil, iil);
-    display(3, iiC, iih, iio, iir);
+    display(3, iiI, iiN, 0, ii2);
     display(4, iiMinus, iiMinus, iiMinus, iiMinus);
     display_level(5, inp_octv*4);
     display(6, iiMinus, iiMinus, iiMinus, iiMinus);
-    display(7, iiMinus, iiMinus, iiMinus, iiMinus);
+    display_level(7, inp_2);
   
   } else if (UI==UI_Dist) {
     //Serial.println("Dist");
@@ -256,10 +256,10 @@ void UI_Display() {
     display(6, 0, iiL, ii3, 0);
     display(7, 0, iiL, ii4, 0);
 
-  } else if (UI==UI_Chor) {
+  } else if (UI==UI_Inp2) {
     //Serial.println("Chorus");
-    display(0, iiC, iih, iio, iir);
-    display(1, iiu, iis, 0, 0);
+    display(0, iiI, iiN, iiP, iiU);
+    display(1, iiT, 0, ii2, 0);
     display(2, 0, 0, 0, 0);
     display(3, 0, 0, 0, 0);
     display(4, 0, iiL, ii1, 0);
@@ -368,33 +368,52 @@ void displayloopstatus(uint8_t d1, uint8_t d2, ChannelState loopstate) {
   switch (loopstate) {
     case idle_empty:
       Serial.print('E');
-      display(d1, iiR, iie, iic, 0);
-      display(d2, iiO, iiP, iiT, iiS);
+      display(d1, 0, iir, iic, 0);
+      display(d2, iiO, iiP, iiT, 0);
       break;
     case armed:
     Serial.print('A');
-      display(d1, iiA, iiR, iiM, iiD);
+      display(d1, iiA, iir, iim, iid);
       display(d2, 0, 0, 0, 0);
       break;
     case rec_first:
       Serial.print('1');
+      display(d1, 0b0011111111111111, iiR, iiC, 0b0011111111111111);
+      display(d2, 0, 0b0000100100110000, 0, 0);
+      break;
     case overdub:
       Serial.print('O');
-      display(d1, iiO, iiOverscore, iiOverscore, iiO);
-      display(d2, iiP, iiL, iiA, iiY);
+      display(d1, 0b0011111111111111, iiR, iiC, 0b0011111111111111);
       break;
     case play:
       Serial.print('P');
       display(d1, iiO, iid, iiu, iib);
-      display(d2, iiS, iit, iio, iip);
       break;
     case idle:
       Serial.print('I');
       display(d1, iiO, iid, iiu, iib);
-      display(d2, iiP, iiL, iiA, iiY);
+      display(d2, 0, 0b0000100100110000, 0, 0);
       break;
-
+  }
+  if ((loopstate==overdub) || (loopstate==play)) {
+    if (pos<mod/8) {
+      display(d2, 0b0000000001000000, 0, iiO, 0);
+    } else if (pos<mod*2/8) {
+      display(d2, 0b0000000011000000, 0, iiO, 0);
+    } else if (pos<mod*3/8) {
+      display(d2, 0b0000000011000000, 0b0000000001000000, iiO, 0);
+    } else if (pos<mod*4/8) {
+      display(d2, 0b0000000011000000, 0b0000000011000000, iiO, 0);
+    } else if (pos<mod*5/8) {
+      display(d2, 0b0000000011000000, 0b0000000011000000, 0b0000000001111111, 0);
+    } else if (pos<mod*6/8) {
+      display(d2, 0b0000000011000000, 0b0000000011000000, ii8, 0);
+    } else if (pos<mod*7/8) {
+      display(d2, 0b0000000011000000, 0b0000000011000000, ii8, 0b0000000001000000);
+    } else {
+      display(d2, 0b0000000011000000, 0b0000000011000000, ii8, 0b0000000011000000);
     }
+  }
 }
 
 void display_level(uint8_t disp, uint8_t level) {

@@ -204,9 +204,9 @@ void UI_Menu_Buttons() {
     } else if (TopRow3) {
       UI=UI_Mell;
     } else if (TopRow4) {
-      UI=UI_Chor;
+      UI=UI_Inp2;
     } else if (TopRow5) {
-      UI=UI_VU;
+      UI=UI_FX1;
     } else if (BottomRow1) {
       UI=UI_xx; // Turn Comp On/Off
     } else if (BottomRow2) {
@@ -214,7 +214,7 @@ void UI_Menu_Buttons() {
     } else if (BottomRow3) {
       inp_mell=1-inp_mell; // Turn Mell On/Off
     } else if (BottomRow4) {
-      UI=UI_xx; // Turn Chor On/Off
+      toggle_level(inp_2, last_2);
     } else if (BottomRow5) {
       UI=UI_Loop_Play_Rec;
     }
@@ -326,13 +326,22 @@ void UI_Menu_Buttons() {
     } else if (TopRow5) {
       UI=UI_FX1;
     } else if (BottomRow1) {
-      UI=UI_xx; // Start All
+      if (loop1State==idle) loop1State=play; // start all
+      if (loop2State==idle) loop2State=play;
+      if (loop3State==idle) loop3State=play;
+      if (loop4State==idle) loop4State=play;
     } else if (BottomRow2) {
-      UI=UI_xx; // Stop All
+      if (loop1State!=idle_empty) loop1State=idle; // Stop All
+      if (loop2State!=idle_empty) loop2State=idle;
+      if (loop3State!=idle_empty) loop3State=idle;
+      if (loop4State!=idle_empty) loop4State=idle;
     } else if (BottomRow3) {
       UI=UI_xx; // Tape Stop
     } else if (BottomRow4) {
-      UI=UI_xx; // Kill
+      if (loop1State!=idle_empty) loop1State=idle; // Kill
+      if (loop2State!=idle_empty) loop2State=idle;
+      if (loop3State!=idle_empty) loop3State=idle;
+      if (loop4State!=idle_empty) loop4State=idle;
     } else if (BottomRow5) {
       UI=UI_Loop_Play_Rec;
     }
@@ -520,7 +529,7 @@ void UI_Menu_Buttons() {
     }
 
 
-  } else if (UI==UI_Chor) {
+  } else if (UI==UI_Inp2) {
     if (TopRow1) {
       UI=UI_FX2; 
     } else if (TopRow2) {
@@ -532,13 +541,17 @@ void UI_Menu_Buttons() {
     } else if (TopRow5) {
       UI=UI_FX1;
     } else if (BottomRow1) {
-      UI=UI_xx; // Set Chor to Level 1
+      set_inp2(1); // Set Input2 to Level 1
+      UI=UI_FX2;
     } else if (BottomRow2) {
-      UI=UI_xx; // Set Chor to Level 2
+      set_inp2(2); // Set Input2 to Level 2
+      UI=UI_FX2;
     } else if (BottomRow3) {
-      UI=UI_xx; // Set Chor to Level 3
+      set_inp2(3); // Set Input2 to Level 3
+      UI=UI_FX2;
     } else if (BottomRow4) {
-      UI=UI_xx; // Set Chor to Level 4
+      set_inp2(4); // Set Input2 to Level 4
+      UI=UI_FX2;
     } else if (BottomRow5) {
       UI=UI_Loop_Play_Rec;
     }
@@ -546,7 +559,7 @@ void UI_Menu_Buttons() {
   }
   
   if(petal.buttons[0].Pressed() || petal.buttons[9].Pressed() && (UI!=UI_BOOT)) {
-    if ((petal.buttons[0].TimeHeldMs() >= 2000) && (petal.buttons[9].TimeHeldMs() >= 2000)) {
+    if ((petal.buttons[0].TimeHeldMs() >= 1500) && (petal.buttons[9].TimeHeldMs() >= 1500)) {
       UI = UI_BOOT;
     }
   }
@@ -558,7 +571,7 @@ void set_dist(int level) {
     case 1:
       dist_SoftGain = 1;
       dist_HardGain = 100;
-      dist_OutGain = 0.2;
+      dist_OutGain = 0.05;
       break;
     case 2:
       dist_SoftGain = 100;
@@ -654,6 +667,9 @@ void set_trem(int level) {
   }
 }
 
+void set_inp2(int level) {
+  inp_2=level;
+}
 
 void toggle_level(int &level, int &old_level) {
   if (level) {
